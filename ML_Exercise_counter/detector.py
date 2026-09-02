@@ -3,14 +3,84 @@ import mediapipe as mp
 import numpy as np
 import pickle
 from collections import deque
+from pathlib import Path
 
 
 # ============================================================
-# MEDIAPIPE
+# PATHS
 # ============================================================
 
-mp_pose = mp.solutions.pose
-mp_draw = mp.solutions.drawing_utils
+BASE_DIR = Path(__file__).resolve().parent
+
+MODEL_PATH = BASE_DIR / "exercise_model.pkl"
+POSE_MODEL_PATH = BASE_DIR / "pose_landmarker_full.task"
+
+
+# ============================================================
+# MEDIAPIPE NEW TASKS API
+# ============================================================
+
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+
+BaseOptions = python.BaseOptions
+
+
+# MediaPipe Pose landmark indexes
+LEFT_SHOULDER = 11
+RIGHT_SHOULDER = 12
+
+LEFT_ELBOW = 13
+RIGHT_ELBOW = 14
+
+LEFT_WRIST = 15
+RIGHT_WRIST = 16
+
+LEFT_HIP = 23
+RIGHT_HIP = 24
+
+LEFT_KNEE = 25
+RIGHT_KNEE = 26
+
+LEFT_ANKLE = 27
+RIGHT_ANKLE = 28
+
+
+# MediaPipe pose connections
+POSE_CONNECTIONS = [
+    (11, 12),
+
+    (11, 13),
+    (13, 15),
+
+    (12, 14),
+    (14, 16),
+
+    (11, 23),
+    (12, 24),
+
+    (23, 24),
+
+    (23, 25),
+    (25, 27),
+
+    (24, 26),
+    (26, 28),
+
+    (27, 29),
+    (28, 30),
+
+    (15, 17),
+    (15, 19),
+    (15, 21),
+
+    (16, 18),
+    (16, 20),
+    (16, 22),
+
+    (27, 31),
+    (28, 32)
+]
 
 
 # ============================================================
@@ -49,54 +119,58 @@ def calculate_angle(a, b, c):
 # ============================================================
 
 class RepCounter:
+
     def __init__(self):
+
         self.reps = 0
+
         self.stage = "DOWN"
-        self.angle_history = deque(maxlen=5)
+
+        self.angle_history = deque(
+            maxlen=5
+        )
+
         self.last_rep_frame = -100
+
 
     def update(self, angle, frame_number):
 
         if angle <= 0:
             return
 
-        # Smooth the angle
         self.angle_history.append(angle)
-        smooth_angle = float(np.mean(self.angle_history))
 
-        # DEBUG
-        # print(
-        #     f"Frame={frame_number} "
-        #     f"Angle={smooth_angle:.1f} "
-        #     f"Stage={self.stage} "
-        #     f"Reps={self.reps}"
-        # )
+        smooth_angle = float(
+            np.mean(
+                self.angle_history
+            )
+        )
 
         # CURL POSITION
         if smooth_angle < 100:
+
             self.stage = "UP"
 
-        # EXTENDED POSITION
-        elif smooth_angle > 130 and self.stage == "UP":
 
-            if frame_number - self.last_rep_frame > 10:
+        # EXTENDED POSITION
+        elif (
+            smooth_angle > 130
+            and self.stage == "UP"
+        ):
+
+            if (
+                frame_number -
+                self.last_rep_frame
+                > 10
+            ):
 
                 self.reps += 1
-                self.last_rep_frame = frame_number
-                self.stage = "DOWN"
 
-                # print(
-                #     "================================"
-                # )
-                # print(
-                #     f"REP COUNTED -> {self.reps}"
-                # )
-                # print(
-                #     f"Angle -> {smooth_angle:.1f}"
-                # )
-                # print(
-                #     "================================"
-                # )
+                self.last_rep_frame = (
+                    frame_number
+                )
+
+                self.stage = "DOWN"
 
 
 # ============================================================
@@ -195,6 +269,91 @@ def put_text(
 
 
 # ============================================================
+# DRAW POSE
+# ============================================================
+
+def draw_pose_landmarks(
+    image,
+    landmarks
+):
+
+    height, width = image.shape[:2]
+
+    # --------------------------------------------------------
+    # DRAW CONNECTIONS
+    # --------------------------------------------------------
+
+    for start_idx, end_idx in POSE_CONNECTIONS:
+
+        if (
+            start_idx >= len(landmarks)
+            or end_idx >= len(landmarks)
+        ):
+            continue
+
+        start = landmarks[start_idx]
+        end = landmarks[end_idx]
+
+        # Visibility check
+        if (
+            hasattr(start, "visibility")
+            and start.visibility < 0.3
+        ):
+            continue
+
+        if (
+            hasattr(end, "visibility")
+            and end.visibility < 0.3
+        ):
+            continue
+
+        x1 = int(start.x * width)
+        y1 = int(start.y * height)
+
+        x2 = int(end.x * width)
+        y2 = int(end.y * height)
+
+        cv2.line(
+            image,
+            (x1, y1),
+            (x2, y2),
+            (80, 230, 255),
+            3,
+            cv2.LINE_AA
+        )
+
+
+    # --------------------------------------------------------
+    # DRAW LANDMARK POINTS
+    # --------------------------------------------------------
+
+    for landmark in landmarks:
+
+        if (
+            hasattr(landmark, "visibility")
+            and landmark.visibility < 0.3
+        ):
+            continue
+
+        x = int(
+            landmark.x * width
+        )
+
+        y = int(
+            landmark.y * height
+        )
+
+        cv2.circle(
+            image,
+            (x, y),
+            4,
+            (255, 120, 60),
+            -1,
+            cv2.LINE_AA
+        )
+
+
+# ============================================================
 # EXERCISE DETECTOR
 # ============================================================
 
@@ -203,39 +362,57 @@ class ExerciseDetector:
     def __init__(self):
 
         # ----------------------------------------------------
-        # MODEL
+        # LOAD EXERCISE MODEL
         # ----------------------------------------------------
 
         with open(
-            "exercise_model.pkl",
+            MODEL_PATH,
             "rb"
         ) as f:
 
             self.model = pickle.load(f)
 
-        # print("Model loaded successfully")
-
-        # print(
-        #     "Features:",
-        #     self.model.feature_names_in_
-        # )
-
-        # print(
-        #     "Classes:",
-        #     self.model.classes_
-        # )
-
 
         # ----------------------------------------------------
-        # MEDIAPIPE
+        # LOAD MEDIAPIPE POSE MODEL
         # ----------------------------------------------------
 
-        self.pose = mp_pose.Pose(
-            static_image_mode=False,
-            model_complexity=1,
-            smooth_landmarks=True,
-            min_detection_confidence=0.5,
+        if not POSE_MODEL_PATH.exists():
+
+            raise FileNotFoundError(
+                f"Pose model not found: {POSE_MODEL_PATH}"
+            )
+
+
+        base_options = BaseOptions(
+            model_asset_path=str(
+                POSE_MODEL_PATH
+            )
+        )
+
+
+        options = vision.PoseLandmarkerOptions(
+
+            base_options=base_options,
+
+            running_mode=(
+                vision.RunningMode.VIDEO
+            ),
+
+            num_poses=1,
+
+            min_pose_detection_confidence=0.5,
+
+            min_pose_presence_confidence=0.5,
+
             min_tracking_confidence=0.5
+        )
+
+
+        self.pose = (
+            vision.PoseLandmarker.create_from_options(
+                options
+            )
         )
 
 
@@ -321,7 +498,7 @@ class ExerciseDetector:
 
 
         # ====================================================
-        # MEDIAPIPE
+        # MEDIAPIPE IMAGE
         # ====================================================
 
         rgb = cv2.cvtColor(
@@ -329,8 +506,28 @@ class ExerciseDetector:
             cv2.COLOR_BGR2RGB
         )
 
-        results = self.pose.process(
-            rgb
+        mp_image = mp.Image(
+            image_format=mp.ImageFormat.SRGB,
+            data=rgb
+        )
+
+
+        # ====================================================
+        # TIMESTAMP
+        # ====================================================
+
+        timestamp_ms = int(
+            self.frame_number * 100
+        )
+
+
+        # ====================================================
+        # POSE DETECTION
+        # ====================================================
+
+        results = self.pose.detect_for_video(
+            mp_image,
+            timestamp_ms
         )
 
 
@@ -354,7 +551,7 @@ class ExerciseDetector:
         if results.pose_landmarks:
 
             landmarks = (
-                results.pose_landmarks.landmark
+                results.pose_landmarks[0]
             )
 
 
@@ -363,51 +560,51 @@ class ExerciseDetector:
             # ------------------------------------------------
 
             LS = landmarks[
-                mp_pose.PoseLandmark.LEFT_SHOULDER
+                LEFT_SHOULDER
             ]
 
             RS = landmarks[
-                mp_pose.PoseLandmark.RIGHT_SHOULDER
+                RIGHT_SHOULDER
             ]
 
             LE = landmarks[
-                mp_pose.PoseLandmark.LEFT_ELBOW
+                LEFT_ELBOW
             ]
 
             RE = landmarks[
-                mp_pose.PoseLandmark.RIGHT_ELBOW
+                RIGHT_ELBOW
             ]
 
             LW = landmarks[
-                mp_pose.PoseLandmark.LEFT_WRIST
+                LEFT_WRIST
             ]
 
             RW = landmarks[
-                mp_pose.PoseLandmark.RIGHT_WRIST
+                RIGHT_WRIST
             ]
 
             LH = landmarks[
-                mp_pose.PoseLandmark.LEFT_HIP
+                LEFT_HIP
             ]
 
             RH = landmarks[
-                mp_pose.PoseLandmark.RIGHT_HIP
+                RIGHT_HIP
             ]
 
             LK = landmarks[
-                mp_pose.PoseLandmark.LEFT_KNEE
+                LEFT_KNEE
             ]
 
             RK = landmarks[
-                mp_pose.PoseLandmark.RIGHT_KNEE
+                RIGHT_KNEE
             ]
 
             LA = landmarks[
-                mp_pose.PoseLandmark.LEFT_ANKLE
+                LEFT_ANKLE
             ]
 
             RA = landmarks[
-                mp_pose.PoseLandmark.RIGHT_ANKLE
+                RIGHT_ANKLE
             ]
 
 
@@ -464,19 +661,9 @@ class ExerciseDetector:
             # DRAW SKELETON
             # =================================================
 
-            mp_draw.draw_landmarks(
+            draw_pose_landmarks(
                 display,
-                results.pose_landmarks,
-                mp_pose.POSE_CONNECTIONS,
-                mp_draw.DrawingSpec(
-                    color=(80, 230, 255),
-                    thickness=3,
-                    circle_radius=4
-                ),
-                mp_draw.DrawingSpec(
-                    color=(255, 120, 60),
-                    thickness=3
-                )
+                landmarks
             )
 
 
@@ -485,21 +672,27 @@ class ExerciseDetector:
             # =================================================
 
             LS_np = np.array(LS_p)
+
             RS_np = np.array(RS_p)
 
             LE_np = np.array(LE_p)
+
             RE_np = np.array(RE_p)
 
             LW_np = np.array(LW_p)
+
             RW_np = np.array(RW_p)
 
             LH_np = np.array(LH_p)
+
             RH_np = np.array(RH_p)
 
             LK_np = np.array(LK_p)
+
             RK_np = np.array(RK_p)
 
             LA_np = np.array(LA_p)
+
             RA_np = np.array(RA_p)
 
 
@@ -540,21 +733,27 @@ class ExerciseDetector:
 
 
             LS_n = normalize(LS_np)
+
             RS_n = normalize(RS_np)
 
             LE_n = normalize(LE_np)
+
             RE_n = normalize(RE_np)
 
             LW_n = normalize(LW_np)
+
             RW_n = normalize(RW_np)
 
             LH_n = normalize(LH_np)
+
             RH_n = normalize(RH_np)
 
             LK_n = normalize(LK_np)
+
             RK_n = normalize(RK_np)
 
             LA_n = normalize(LA_np)
+
             RA_n = normalize(RA_np)
 
 
@@ -617,13 +816,21 @@ class ExerciseDetector:
 
 
             features = [[
+
                 left_elbow_feature,
+
                 right_elbow_feature,
+
                 left_knee_feature,
+
                 right_knee_feature,
+
                 shoulder_feature,
+
                 left_arm_length,
+
                 right_arm_length
+
             ]]
 
 
@@ -679,12 +886,7 @@ class ExerciseDetector:
                 )
 
 
-            except Exception as e:
-
-                # print(
-                #     "Model prediction error:",
-                #     e
-                # )
+            except Exception:
 
                 prediction = "MODEL ERROR"
 
@@ -944,9 +1146,11 @@ class ExerciseDetector:
         # ====================================================
 
         bar_x = 465
+
         bar_y = 595
 
         bar_width = 340
+
         bar_height = 15
 
 
@@ -1081,4 +1285,10 @@ class ExerciseDetector:
 
     def close(self):
 
-        self.pose.close()
+        try:
+
+            self.pose.close()
+
+        except Exception:
+
+            pass

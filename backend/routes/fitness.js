@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-const fitnessSchema = new mongoose.Schema({
+export const fitnessSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

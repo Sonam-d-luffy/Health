@@ -12,6 +12,7 @@ import nearby from './controllers/sportsAcademies.js'
 import activity from './controllers/activity.js'
 import territory from './controllers/territory.js'
 import institute from './controllers/institute.js'
+import fitness from './controllers/fitness.js'
 
 dotenv.config()
 
@@ -40,6 +41,8 @@ app.use('/api/sports' , nearby)
 app.use('/api/activity',activity)
 app.use('/api/territory' , territory)
 app.use('/api/institute',institute)
+app.use('/api/fitness', fitness)
+
 
 
 

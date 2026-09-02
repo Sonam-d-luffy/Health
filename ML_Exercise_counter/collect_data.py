@@ -8,34 +8,21 @@ mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 
 pose = mp_pose.Pose(
-    static_image_mode=False,
     model_complexity=1,
     min_detection_confidence=0.7,
     min_tracking_confidence=0.7
 )
 
-CSV_FILE = "exercise_dataset.csv"
+FILE_NAME = "exercise_dataset.csv"
 
-FEATURE_NAMES = [
-    "left_elbow",
-    "right_elbow",
-    "left_knee",
-    "right_knee",
-    "shoulder_distance",
-    "left_arm_length",
-    "right_arm_length"
-]
-
-
+# -----------------------------
+# Calculate angle
+# -----------------------------
 def calculate_angle(a, b, c):
-
     ba = a - b
     bc = c - b
 
-    denominator = (
-        np.linalg.norm(ba) *
-        np.linalg.norm(bc)
-    )
+    denominator = np.linalg.norm(ba) * np.linalg.norm(bc)
 
     if denominator == 0:
         return 0
@@ -46,183 +33,242 @@ def calculate_angle(a, b, c):
     return np.degrees(np.arccos(cosine))
 
 
-def normalize_landmarks(landmarks):
-
-    points = np.array([
-        [lm.x, lm.y, lm.z]
-        for lm in landmarks
-    ])
-
-    hip_center = (points[23] + points[24]) / 2
-
-    points = points - hip_center
-
-    shoulder_width = np.linalg.norm(
-        points[11] - points[12]
-    )
-
-    if shoulder_width > 0:
-        points = points / shoulder_width
-
-    return points
+# -----------------------------
+# Distance
+# -----------------------------
+def calculate_distance(a, b):
+    return np.linalg.norm(a - b)
 
 
-def extract_features(points):
+# -----------------------------
+# Create CSV
+# -----------------------------
+if not os.path.exists(FILE_NAME):
 
-    left_elbow = calculate_angle(
-        points[11],
-        points[13],
-        points[15]
-    )
-
-    right_elbow = calculate_angle(
-        points[12],
-        points[14],
-        points[16]
-    )
-
-    left_knee = calculate_angle(
-        points[23],
-        points[25],
-        points[27]
-    )
-
-    right_knee = calculate_angle(
-        points[24],
-        points[26],
-        points[28]
-    )
-
-    shoulder_distance = np.linalg.norm(
-        points[11] - points[12]
-    )
-
-    left_arm_length = (
-        np.linalg.norm(points[11] - points[13])
-        + np.linalg.norm(points[13] - points[15])
-    )
-
-    right_arm_length = (
-        np.linalg.norm(points[12] - points[14])
-        + np.linalg.norm(points[14] - points[16])
-    )
-
-    return [
-        left_elbow,
-        right_elbow,
-        left_knee,
-        right_knee,
-        shoulder_distance,
-        left_arm_length,
-        right_arm_length
-    ]
-
-
-# Create CSV file if it doesn't exist
-
-if not os.path.exists(CSV_FILE):
-
-    with open(
-        CSV_FILE,
-        "w",
-        newline=""
-    ) as file:
+    with open(FILE_NAME, "w", newline="") as file:
 
         writer = csv.writer(file)
 
-        writer.writerow(
-            ["label"] + FEATURE_NAMES
-        )
+        writer.writerow([
+            "label",
+            "left_elbow",
+            "right_elbow",
+            "left_knee",
+            "right_knee",
+            "shoulder_distance",
+            "left_arm_length",
+            "right_arm_length"
+        ])
 
 
+# -----------------------------
+# Webcam
+# -----------------------------
 cap = cv2.VideoCapture(0)
 
-current_label = None
+current_label = "no_exercise"
 
-print()
-print("===================================")
-print("       EXERCISE DATA COLLECTOR")
-print("===================================")
-print()
+print("\n================================")
+print("EXERCISE DATA COLLECTION")
+print("================================")
 print("B = Bicep Curl")
 print("S = Side Movement")
 print("N = No Exercise")
 print("Q = Quit")
-print()
+print("================================\n")
 
 
 while cap.isOpened():
 
-    success, frame = cap.read()
+    ret, frame = cap.read()
 
-    if not success:
-        print("Camera error")
+    if not ret:
+        print("Camera not working")
         break
 
-    rgb_frame = cv2.cvtColor(
-        frame,
-        cv2.COLOR_BGR2RGB
-    )
+    frame = cv2.flip(frame, 1)
 
-    results = pose.process(rgb_frame)
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    results = pose.process(rgb)
 
     if results.pose_landmarks:
 
         landmarks = results.pose_landmarks.landmark
 
-        required = [
-            11, 12, 13, 14, 15, 16,
-            23, 24, 25, 26, 27, 28
-        ]
+        # Convert landmarks to numpy arrays
+        left_shoulder = np.array([
+            landmarks[11].x,
+            landmarks[11].y,
+            landmarks[11].z
+        ])
 
-        visible = all(
-            landmarks[i].visibility > 0.7
-            for i in required
+        right_shoulder = np.array([
+            landmarks[12].x,
+            landmarks[12].y,
+            landmarks[12].z
+        ])
+
+        left_elbow_point = np.array([
+            landmarks[13].x,
+            landmarks[13].y,
+            landmarks[13].z
+        ])
+
+        right_elbow_point = np.array([
+            landmarks[14].x,
+            landmarks[14].y,
+            landmarks[14].z
+        ])
+
+        left_wrist = np.array([
+            landmarks[15].x,
+            landmarks[15].y,
+            landmarks[15].z
+        ])
+
+        right_wrist = np.array([
+            landmarks[16].x,
+            landmarks[16].y,
+            landmarks[16].z
+        ])
+
+        left_hip = np.array([
+            landmarks[23].x,
+            landmarks[23].y,
+            landmarks[23].z
+        ])
+
+        right_hip = np.array([
+            landmarks[24].x,
+            landmarks[24].y,
+            landmarks[24].z
+        ])
+
+        left_knee_point = np.array([
+            landmarks[25].x,
+            landmarks[25].y,
+            landmarks[25].z
+        ])
+
+        right_knee_point = np.array([
+            landmarks[26].x,
+            landmarks[26].y,
+            landmarks[26].z
+        ])
+
+        left_ankle = np.array([
+            landmarks[27].x,
+            landmarks[27].y,
+            landmarks[27].z
+        ])
+
+        right_ankle = np.array([
+            landmarks[28].x,
+            landmarks[28].y,
+            landmarks[28].z
+        ])
+
+        # -----------------------------
+        # Calculate features
+        # -----------------------------
+
+        left_elbow = calculate_angle(
+            left_shoulder,
+            left_elbow_point,
+            left_wrist
         )
 
-        if visible:
+        right_elbow = calculate_angle(
+            right_shoulder,
+            right_elbow_point,
+            right_wrist
+        )
 
-            points = normalize_landmarks(
-                landmarks
-            )
+        left_knee = calculate_angle(
+            left_hip,
+            left_knee_point,
+            left_ankle
+        )
 
-            features = extract_features(
-                points
-            )
+        right_knee = calculate_angle(
+            right_hip,
+            right_knee_point,
+            right_ankle
+        )
 
-            if current_label is not None:
+        shoulder_distance = calculate_distance(
+            left_shoulder,
+            right_shoulder
+        )
 
-                with open(
-                    CSV_FILE,
-                    "a",
-                    newline=""
-                ) as file:
+        left_arm_length = (
+            calculate_distance(left_shoulder, left_elbow_point)
+            +
+            calculate_distance(left_elbow_point, left_wrist)
+        )
 
-                    writer = csv.writer(file)
+        right_arm_length = (
+            calculate_distance(right_shoulder, right_elbow_point)
+            +
+            calculate_distance(right_elbow_point, right_wrist)
+        )
 
-                    writer.writerow(
-                        [current_label] + features
-                    )
+        # -----------------------------
+        # Save data
+        # -----------------------------
 
-            mp_drawing.draw_landmarks(
-                frame,
-                results.pose_landmarks,
-                mp_pose.POSE_CONNECTIONS
-            )
+        row = [
+            current_label,
+            round(left_elbow, 2),
+            round(right_elbow, 2),
+            round(left_knee, 2),
+            round(right_knee, 2),
+            round(shoulder_distance, 4),
+            round(left_arm_length, 4),
+            round(right_arm_length, 4)
+        ]
 
-    # Display current collection mode
+        with open(FILE_NAME, "a", newline="") as file:
 
-    if current_label:
+            writer = csv.writer(file)
+            writer.writerow(row)
 
-        text = f"COLLECTING: {current_label}"
+        # Draw landmarks
+        mp_drawing.draw_landmarks(
+            frame,
+            results.pose_landmarks,
+            mp_pose.POSE_CONNECTIONS
+        )
 
+        # Display values
         cv2.putText(
             frame,
-            text,
-            (20, 40),
+            f"Label: {current_label}",
+            (20, 35),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.8,
             (0, 255, 0),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"L Elbow: {left_elbow:.1f}",
+            (20, 70),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"R Elbow: {right_elbow:.1f}",
+            (20, 100),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
             2
         )
 
@@ -230,44 +276,37 @@ while cap.isOpened():
 
         cv2.putText(
             frame,
-            "Press B / S / N",
+            "No Pose Detected",
             (20, 40),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.8,
-            (0, 255, 255),
+            (0, 0, 255),
             2
         )
 
-    cv2.imshow(
-        "Exercise Dataset Collector",
-        frame
-    )
+    cv2.imshow("Exercise Data Collection", frame)
 
     key = cv2.waitKey(1) & 0xFF
 
     if key == ord("b"):
-
         current_label = "bicep_curl"
-        print("Collecting BICEP CURL data")
+        print("Collecting: BICEP CURL")
 
     elif key == ord("s"):
-
         current_label = "side_movement"
-        print("Collecting SIDE MOVEMENT data")
+        print("Collecting: SIDE MOVEMENT")
 
     elif key == ord("n"):
-
         current_label = "no_exercise"
-        print("Collecting NO EXERCISE data")
+        print("Collecting: NO EXERCISE")
 
     elif key == ord("q"):
-
         break
 
 
 cap.release()
 cv2.destroyAllWindows()
+pose.close()
 
-print()
-print("Dataset saved to:")
-print(CSV_FILE)
+print("\nData collection finished!")
+print("Dataset:", FILE_NAME)

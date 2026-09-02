@@ -2,12 +2,16 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import pickle
+
 from collections import deque
 from pathlib import Path
 
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+
 
 # ============================================================
-# PATHS
+# BASE DIRECTORY
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -17,16 +21,9 @@ POSE_MODEL_PATH = BASE_DIR / "pose_landmarker_full.task"
 
 
 # ============================================================
-# MEDIAPIPE NEW TASKS API
+# MEDIAPIPE LANDMARK INDICES
 # ============================================================
 
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
-
-BaseOptions = python.BaseOptions
-
-
-# MediaPipe Pose landmark indexes
 LEFT_SHOULDER = 11
 RIGHT_SHOULDER = 12
 
@@ -46,45 +43,56 @@ LEFT_ANKLE = 27
 RIGHT_ANKLE = 28
 
 
-# MediaPipe pose connections
+# ============================================================
+# POSE CONNECTIONS
+# ============================================================
+
 POSE_CONNECTIONS = [
-    (11, 12),
 
-    (11, 13),
-    (13, 15),
+    # shoulders
+    (LEFT_SHOULDER, RIGHT_SHOULDER),
 
-    (12, 14),
-    (14, 16),
+    # left arm
+    (LEFT_SHOULDER, LEFT_ELBOW),
+    (LEFT_ELBOW, LEFT_WRIST),
 
-    (11, 23),
-    (12, 24),
+    # right arm
+    (RIGHT_SHOULDER, RIGHT_ELBOW),
+    (RIGHT_ELBOW, RIGHT_WRIST),
 
-    (23, 24),
+    # torso
+    (LEFT_SHOULDER, LEFT_HIP),
+    (RIGHT_SHOULDER, RIGHT_HIP),
+    (LEFT_HIP, RIGHT_HIP),
 
-    (23, 25),
-    (25, 27),
+    # left leg
+    (LEFT_HIP, LEFT_KNEE),
+    (LEFT_KNEE, LEFT_ANKLE),
 
-    (24, 26),
-    (26, 28),
+    # right leg
+    (RIGHT_HIP, RIGHT_KNEE),
+    (RIGHT_KNEE, RIGHT_ANKLE),
 
-    (27, 29),
-    (28, 30),
+    # hands
+    (LEFT_WRIST, 17),
+    (LEFT_WRIST, 19),
+    (LEFT_WRIST, 21),
 
-    (15, 17),
-    (15, 19),
-    (15, 21),
+    (RIGHT_WRIST, 18),
+    (RIGHT_WRIST, 20),
+    (RIGHT_WRIST, 22),
 
-    (16, 18),
-    (16, 20),
-    (16, 22),
+    # feet
+    (LEFT_ANKLE, 29),
+    (LEFT_ANKLE, 31),
 
-    (27, 31),
-    (28, 32)
+    (RIGHT_ANKLE, 30),
+    (RIGHT_ANKLE, 32),
 ]
 
 
 # ============================================================
-# ANGLE
+# ANGLE CALCULATION
 # ============================================================
 
 def calculate_angle(a, b, c):
@@ -97,15 +105,23 @@ def calculate_angle(a, b, c):
     bc = c - b
 
     denominator = (
-        np.linalg.norm(ba) *
-        np.linalg.norm(bc)
+        np.linalg.norm(ba)
+        * np.linalg.norm(bc)
     )
 
     if denominator == 0:
         return 0.0
 
-    cosine = np.dot(ba, bc) / denominator
-    cosine = np.clip(cosine, -1.0, 1.0)
+    cosine = (
+        np.dot(ba, bc)
+        / denominator
+    )
+
+    cosine = np.clip(
+        cosine,
+        -1.0,
+        1.0
+    )
 
     return float(
         np.degrees(
@@ -133,12 +149,22 @@ class RepCounter:
         self.last_rep_frame = -100
 
 
-    def update(self, angle, frame_number):
+    def update(
+        self,
+        angle,
+        frame_number
+    ):
 
         if angle <= 0:
             return
 
-        self.angle_history.append(angle)
+        # ----------------------------------------------------
+        # SMOOTH ANGLE
+        # ----------------------------------------------------
+
+        self.angle_history.append(
+            angle
+        )
 
         smooth_angle = float(
             np.mean(
@@ -146,21 +172,28 @@ class RepCounter:
             )
         )
 
+
+        # ----------------------------------------------------
         # CURL POSITION
+        # ----------------------------------------------------
+
         if smooth_angle < 100:
 
             self.stage = "UP"
 
 
+        # ----------------------------------------------------
         # EXTENDED POSITION
+        # ----------------------------------------------------
+
         elif (
             smooth_angle > 130
             and self.stage == "UP"
         ):
 
             if (
-                frame_number -
-                self.last_rep_frame
+                frame_number
+                - self.last_rep_frame
                 > 10
             ):
 
@@ -174,7 +207,119 @@ class RepCounter:
 
 
 # ============================================================
-# UI FUNCTIONS
+# DRAW POSE
+# ============================================================
+
+def draw_pose_landmarks(
+    image,
+    landmarks
+):
+
+    height, width = image.shape[:2]
+
+    points = {}
+
+    # --------------------------------------------------------
+    # CONVERT LANDMARKS TO PIXELS
+    # --------------------------------------------------------
+
+    for index, landmark in enumerate(
+        landmarks
+    ):
+
+        x = int(
+            landmark.x * width
+        )
+
+        y = int(
+            landmark.y * height
+        )
+
+        points[index] = (
+            x,
+            y
+        )
+
+
+    # --------------------------------------------------------
+    # DRAW CONNECTIONS
+    # --------------------------------------------------------
+
+    for start, end in POSE_CONNECTIONS:
+
+        if (
+            start not in points
+            or end not in points
+        ):
+            continue
+
+        x1, y1 = points[start]
+        x2, y2 = points[end]
+
+        cv2.line(
+            image,
+            (x1, y1),
+            (x2, y2),
+            (80, 230, 255),
+            3,
+            cv2.LINE_AA
+        )
+
+
+    # --------------------------------------------------------
+    # DRAW LANDMARK POINTS
+    # --------------------------------------------------------
+
+    important_points = [
+
+        LEFT_SHOULDER,
+        RIGHT_SHOULDER,
+
+        LEFT_ELBOW,
+        RIGHT_ELBOW,
+
+        LEFT_WRIST,
+        RIGHT_WRIST,
+
+        LEFT_HIP,
+        RIGHT_HIP,
+
+        LEFT_KNEE,
+        RIGHT_KNEE,
+
+        LEFT_ANKLE,
+        RIGHT_ANKLE
+    ]
+
+
+    for index in important_points:
+
+        if index not in points:
+            continue
+
+        x, y = points[index]
+
+        cv2.circle(
+            image,
+            (x, y),
+            7,
+            (255, 120, 60),
+            -1,
+            cv2.LINE_AA
+        )
+
+        cv2.circle(
+            image,
+            (x, y),
+            10,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA
+        )
+
+
+# ============================================================
+# ROUNDED BOX
 # ============================================================
 
 def rounded_box(
@@ -191,23 +336,38 @@ def rounded_box(
 
     cv2.rectangle(
         overlay,
-        (x1 + radius, y1),
-        (x2 - radius, y2),
+        (
+            x1 + radius,
+            y1
+        ),
+        (
+            x2 - radius,
+            y2
+        ),
         (20, 25, 35),
         thickness
     )
 
     cv2.rectangle(
         overlay,
-        (x1, y1 + radius),
-        (x2, y2 - radius),
+        (
+            x1,
+            y1 + radius
+        ),
+        (
+            x2,
+            y2 - radius
+        ),
         (20, 25, 35),
         thickness
     )
 
     cv2.circle(
         overlay,
-        (x1 + radius, y1 + radius),
+        (
+            x1 + radius,
+            y1 + radius
+        ),
         radius,
         (20, 25, 35),
         thickness
@@ -215,7 +375,10 @@ def rounded_box(
 
     cv2.circle(
         overlay,
-        (x2 - radius, y1 + radius),
+        (
+            x2 - radius,
+            y1 + radius
+        ),
         radius,
         (20, 25, 35),
         thickness
@@ -223,7 +386,10 @@ def rounded_box(
 
     cv2.circle(
         overlay,
-        (x1 + radius, y2 - radius),
+        (
+            x1 + radius,
+            y2 - radius
+        ),
         radius,
         (20, 25, 35),
         thickness
@@ -231,7 +397,10 @@ def rounded_box(
 
     cv2.circle(
         overlay,
-        (x2 - radius, y2 - radius),
+        (
+            x2 - radius,
+            y2 - radius
+        ),
         radius,
         (20, 25, 35),
         thickness
@@ -246,6 +415,10 @@ def rounded_box(
         image
     )
 
+
+# ============================================================
+# TEXT
+# ============================================================
 
 def put_text(
     image,
@@ -269,91 +442,6 @@ def put_text(
 
 
 # ============================================================
-# DRAW POSE
-# ============================================================
-
-def draw_pose_landmarks(
-    image,
-    landmarks
-):
-
-    height, width = image.shape[:2]
-
-    # --------------------------------------------------------
-    # DRAW CONNECTIONS
-    # --------------------------------------------------------
-
-    for start_idx, end_idx in POSE_CONNECTIONS:
-
-        if (
-            start_idx >= len(landmarks)
-            or end_idx >= len(landmarks)
-        ):
-            continue
-
-        start = landmarks[start_idx]
-        end = landmarks[end_idx]
-
-        # Visibility check
-        if (
-            hasattr(start, "visibility")
-            and start.visibility < 0.3
-        ):
-            continue
-
-        if (
-            hasattr(end, "visibility")
-            and end.visibility < 0.3
-        ):
-            continue
-
-        x1 = int(start.x * width)
-        y1 = int(start.y * height)
-
-        x2 = int(end.x * width)
-        y2 = int(end.y * height)
-
-        cv2.line(
-            image,
-            (x1, y1),
-            (x2, y2),
-            (80, 230, 255),
-            3,
-            cv2.LINE_AA
-        )
-
-
-    # --------------------------------------------------------
-    # DRAW LANDMARK POINTS
-    # --------------------------------------------------------
-
-    for landmark in landmarks:
-
-        if (
-            hasattr(landmark, "visibility")
-            and landmark.visibility < 0.3
-        ):
-            continue
-
-        x = int(
-            landmark.x * width
-        )
-
-        y = int(
-            landmark.y * height
-        )
-
-        cv2.circle(
-            image,
-            (x, y),
-            4,
-            (255, 120, 60),
-            -1,
-            cv2.LINE_AA
-        )
-
-
-# ============================================================
 # EXERCISE DETECTOR
 # ============================================================
 
@@ -361,9 +449,16 @@ class ExerciseDetector:
 
     def __init__(self):
 
-        # ----------------------------------------------------
+        # ====================================================
         # LOAD EXERCISE MODEL
-        # ----------------------------------------------------
+        # ====================================================
+
+        if not MODEL_PATH.exists():
+
+            raise FileNotFoundError(
+                f"Exercise model not found: "
+                f"{MODEL_PATH}"
+            )
 
         with open(
             MODEL_PATH,
@@ -373,39 +468,48 @@ class ExerciseDetector:
             self.model = pickle.load(f)
 
 
-        # ----------------------------------------------------
-        # LOAD MEDIAPIPE POSE MODEL
-        # ----------------------------------------------------
+        # ====================================================
+        # CHECK POSE MODEL
+        # ====================================================
 
         if not POSE_MODEL_PATH.exists():
 
             raise FileNotFoundError(
-                f"Pose model not found: {POSE_MODEL_PATH}"
+                f"Pose model not found: "
+                f"{POSE_MODEL_PATH}"
             )
 
 
-        base_options = BaseOptions(
-            model_asset_path=str(
-                POSE_MODEL_PATH
+        # ====================================================
+        # MEDIAPIPE POSE LANDMARKER
+        # ====================================================
+
+        base_options = (
+            python.BaseOptions(
+                model_asset_path=str(
+                    POSE_MODEL_PATH
+                )
             )
         )
 
 
-        options = vision.PoseLandmarkerOptions(
+        options = (
+            vision.PoseLandmarkerOptions(
 
-            base_options=base_options,
+                base_options=base_options,
 
-            running_mode=(
-                vision.RunningMode.VIDEO
-            ),
+                running_mode=(
+                    vision.RunningMode.VIDEO
+                ),
 
-            num_poses=1,
+                num_poses=1,
 
-            min_pose_detection_confidence=0.5,
+                min_pose_detection_confidence=0.5,
 
-            min_pose_presence_confidence=0.5,
+                min_pose_presence_confidence=0.5,
 
-            min_tracking_confidence=0.5
+                min_tracking_confidence=0.5
+            )
         )
 
 
@@ -416,27 +520,31 @@ class ExerciseDetector:
         )
 
 
-        # ----------------------------------------------------
+        # ====================================================
         # COUNTERS
-        # ----------------------------------------------------
+        # ====================================================
 
-        self.left_counter = RepCounter()
+        self.left_counter = (
+            RepCounter()
+        )
 
-        self.right_counter = RepCounter()
-
-
-        # ----------------------------------------------------
-        # PREDICTION SMOOTHING
-        # ----------------------------------------------------
-
-        self.prediction_history = deque(
-            maxlen=5
+        self.right_counter = (
+            RepCounter()
         )
 
 
-        # ----------------------------------------------------
+        # ====================================================
+        # PREDICTION HISTORY
+        # ====================================================
+
+        self.prediction_history = (
+            deque(maxlen=5)
+        )
+
+
+        # ====================================================
         # FRAME NUMBER
-        # ----------------------------------------------------
+        # ====================================================
 
         self.frame_number = 0
 
@@ -445,7 +553,10 @@ class ExerciseDetector:
     # PROCESS FRAME
     # ========================================================
 
-    def process(self, frame):
+    def process(
+        self,
+        frame
+    ):
 
         self.frame_number += 1
 
@@ -474,7 +585,7 @@ class ExerciseDetector:
 
 
         # ====================================================
-        # DARK GRADIENT OVERLAY
+        # DARK OVERLAY
         # ====================================================
 
         overlay = display.copy()
@@ -498,41 +609,7 @@ class ExerciseDetector:
 
 
         # ====================================================
-        # MEDIAPIPE IMAGE
-        # ====================================================
-
-        rgb = cv2.cvtColor(
-            frame,
-            cv2.COLOR_BGR2RGB
-        )
-
-        mp_image = mp.Image(
-            image_format=mp.ImageFormat.SRGB,
-            data=rgb
-        )
-
-
-        # ====================================================
-        # TIMESTAMP
-        # ====================================================
-
-        timestamp_ms = int(
-            self.frame_number * 100
-        )
-
-
-        # ====================================================
-        # POSE DETECTION
-        # ====================================================
-
-        results = self.pose.detect_for_video(
-            mp_image,
-            timestamp_ms
-        )
-
-
-        # ====================================================
-        # DEFAULT
+        # DEFAULT VALUES
         # ====================================================
 
         prediction = "NO EXERCISE"
@@ -542,6 +619,39 @@ class ExerciseDetector:
         left_angle = 0.0
 
         right_angle = 0.0
+
+
+        # ====================================================
+        # MEDIAPIPE
+        # ====================================================
+
+        rgb = cv2.cvtColor(
+            frame,
+            cv2.COLOR_BGR2RGB
+        )
+
+
+        mp_image = mp.Image(
+            image_format=mp.ImageFormat.SRGB,
+            data=rgb
+        )
+
+
+        # ====================================================
+        # VIDEO TIMESTAMP
+        # ====================================================
+
+        timestamp_ms = int(
+            self.frame_number * 33
+        )
+
+
+        results = (
+            self.pose.detect_for_video(
+                mp_image,
+                timestamp_ms
+            )
+        )
 
 
         # ====================================================
@@ -555,9 +665,9 @@ class ExerciseDetector:
             )
 
 
-            # ------------------------------------------------
-            # LANDMARKS
-            # ------------------------------------------------
+            # =================================================
+            # LANDMARK EXTRACTION
+            # =================================================
 
             LS = landmarks[
                 LEFT_SHOULDER
@@ -608,9 +718,9 @@ class ExerciseDetector:
             ]
 
 
-            # ------------------------------------------------
+            # =================================================
             # POINT FUNCTION
-            # ------------------------------------------------
+            # =================================================
 
             def point(lm):
 
@@ -641,7 +751,7 @@ class ExerciseDetector:
 
 
             # =================================================
-            # ANGLES
+            # ARM ANGLES
             # =================================================
 
             left_angle = calculate_angle(
@@ -671,29 +781,65 @@ class ExerciseDetector:
             # NORMALIZATION
             # =================================================
 
-            LS_np = np.array(LS_p)
+            LS_np = np.array(
+                LS_p,
+                dtype=np.float32
+            )
 
-            RS_np = np.array(RS_p)
+            RS_np = np.array(
+                RS_p,
+                dtype=np.float32
+            )
 
-            LE_np = np.array(LE_p)
+            LE_np = np.array(
+                LE_p,
+                dtype=np.float32
+            )
 
-            RE_np = np.array(RE_p)
+            RE_np = np.array(
+                RE_p,
+                dtype=np.float32
+            )
 
-            LW_np = np.array(LW_p)
+            LW_np = np.array(
+                LW_p,
+                dtype=np.float32
+            )
 
-            RW_np = np.array(RW_p)
+            RW_np = np.array(
+                RW_p,
+                dtype=np.float32
+            )
 
-            LH_np = np.array(LH_p)
+            LH_np = np.array(
+                LH_p,
+                dtype=np.float32
+            )
 
-            RH_np = np.array(RH_p)
+            RH_np = np.array(
+                RH_p,
+                dtype=np.float32
+            )
 
-            LK_np = np.array(LK_p)
+            LK_np = np.array(
+                LK_p,
+                dtype=np.float32
+            )
 
-            RK_np = np.array(RK_p)
+            RK_np = np.array(
+                RK_p,
+                dtype=np.float32
+            )
 
-            LA_np = np.array(LA_p)
+            LA_np = np.array(
+                LA_p,
+                dtype=np.float32
+            )
 
-            RA_np = np.array(RA_p)
+            RA_np = np.array(
+                RA_p,
+                dtype=np.float32
+            )
 
 
             # =================================================
@@ -701,8 +847,7 @@ class ExerciseDetector:
             # =================================================
 
             hip_center = (
-                LH_np +
-                RH_np
+                LH_np + RH_np
             ) / 2
 
 
@@ -710,10 +855,12 @@ class ExerciseDetector:
             # SHOULDER DISTANCE
             # =================================================
 
-            shoulder_distance = np.linalg.norm(
-                LS_np -
-                RS_np
+            shoulder_distance = (
+                np.linalg.norm(
+                    LS_np - RS_np
+                )
             )
+
 
             if shoulder_distance < 0.001:
 
@@ -727,33 +874,26 @@ class ExerciseDetector:
             def normalize(p):
 
                 return (
-                    p -
-                    hip_center
+                    p - hip_center
                 ) / shoulder_distance
 
 
             LS_n = normalize(LS_np)
-
             RS_n = normalize(RS_np)
 
             LE_n = normalize(LE_np)
-
             RE_n = normalize(RE_np)
 
             LW_n = normalize(LW_np)
-
             RW_n = normalize(RW_np)
 
             LH_n = normalize(LH_np)
-
             RH_n = normalize(RH_np)
 
             LK_n = normalize(LK_np)
-
             RK_n = normalize(RK_np)
 
             LA_n = normalize(LA_np)
-
             RA_n = normalize(RA_np)
 
 
@@ -761,59 +901,73 @@ class ExerciseDetector:
             # FEATURES
             # =================================================
 
-            left_elbow_feature = calculate_angle(
-                LS_n,
-                LE_n,
-                LW_n
+            left_elbow_feature = (
+                calculate_angle(
+                    LS_n,
+                    LE_n,
+                    LW_n
+                )
             )
 
-            right_elbow_feature = calculate_angle(
-                RS_n,
-                RE_n,
-                RW_n
+            right_elbow_feature = (
+                calculate_angle(
+                    RS_n,
+                    RE_n,
+                    RW_n
+                )
             )
 
-            left_knee_feature = calculate_angle(
-                LH_n,
-                LK_n,
-                LA_n
+            left_knee_feature = (
+                calculate_angle(
+                    LH_n,
+                    LK_n,
+                    LA_n
+                )
             )
 
-            right_knee_feature = calculate_angle(
-                RH_n,
-                RK_n,
-                RA_n
+            right_knee_feature = (
+                calculate_angle(
+                    RH_n,
+                    RK_n,
+                    RA_n
+                )
             )
 
-            shoulder_feature = np.linalg.norm(
-                LS_n -
-                RS_n
+            shoulder_feature = (
+                np.linalg.norm(
+                    LS_n - RS_n
+                )
             )
+
+
+            # =================================================
+            # ARM LENGTH
+            # =================================================
 
             left_arm_length = (
                 np.linalg.norm(
-                    LS_n -
-                    LE_n
+                    LS_n - LE_n
                 )
                 +
                 np.linalg.norm(
-                    LE_n -
-                    LW_n
+                    LE_n - LW_n
                 )
             )
 
             right_arm_length = (
                 np.linalg.norm(
-                    RS_n -
-                    RE_n
+                    RS_n - RE_n
                 )
                 +
                 np.linalg.norm(
-                    RE_n -
-                    RW_n
+                    RE_n - RW_n
                 )
             )
 
+
+            # =================================================
+            # FINAL FEATURES
+            # =================================================
 
             features = [[
 
@@ -830,12 +984,11 @@ class ExerciseDetector:
                 left_arm_length,
 
                 right_arm_length
-
             ]]
 
 
             # =================================================
-            # MODEL
+            # MODEL PREDICTION
             # =================================================
 
             try:
@@ -846,18 +999,29 @@ class ExerciseDetector:
                     )[0]
                 )
 
-                index = np.argmax(
-                    probabilities
+
+                index = int(
+                    np.argmax(
+                        probabilities
+                    )
                 )
+
 
                 current_prediction = (
                     self.model.classes_[index]
                 )
 
+
                 current_confidence = (
-                    probabilities[index]
+                    float(
+                        probabilities[index]
+                    )
                 )
 
+
+                # =================================================
+                # SMOOTH PREDICTION
+                # =================================================
 
                 self.prediction_history.append(
                     current_prediction
@@ -866,7 +1030,10 @@ class ExerciseDetector:
 
                 counts = {}
 
-                for p in self.prediction_history:
+
+                for p in (
+                    self.prediction_history
+                ):
 
                     counts[p] = (
                         counts.get(
@@ -881,14 +1048,17 @@ class ExerciseDetector:
                     key=counts.get
                 )
 
-                confidence = float(
+
+                confidence = (
                     current_confidence
                 )
 
 
             except Exception:
 
-                prediction = "MODEL ERROR"
+                prediction = (
+                    "MODEL ERROR"
+                )
 
                 confidence = 0.0
 
@@ -902,6 +1072,7 @@ class ExerciseDetector:
                 self.frame_number
             )
 
+
             self.right_counter.update(
                 right_angle,
                 self.frame_number
@@ -909,11 +1080,12 @@ class ExerciseDetector:
 
 
         # ====================================================
-        # TOTAL
+        # TOTAL REPS
         # ====================================================
 
         total_reps = (
-            self.left_counter.reps +
+            self.left_counter.reps
+            +
             self.right_counter.reps
         )
 
@@ -931,6 +1103,7 @@ class ExerciseDetector:
             (80, 230, 255)
         )
 
+
         put_text(
             display,
             "VISION",
@@ -939,6 +1112,7 @@ class ExerciseDetector:
             2,
             (255, 255, 255)
         )
+
 
         put_text(
             display,
@@ -963,6 +1137,7 @@ class ExerciseDetector:
             25
         )
 
+
         put_text(
             display,
             "TOTAL REPS",
@@ -971,6 +1146,7 @@ class ExerciseDetector:
             2,
             (180, 190, 200)
         )
+
 
         put_text(
             display,
@@ -995,6 +1171,7 @@ class ExerciseDetector:
             25
         )
 
+
         put_text(
             display,
             "LEFT ARM",
@@ -1004,14 +1181,18 @@ class ExerciseDetector:
             (255, 255, 255)
         )
 
+
         put_text(
             display,
-            str(self.left_counter.reps),
+            str(
+                self.left_counter.reps
+            ),
             (65, 580),
             2.0,
             4,
             (80, 230, 255)
         )
+
 
         put_text(
             display,
@@ -1022,6 +1203,7 @@ class ExerciseDetector:
             (170, 180, 190)
         )
 
+
         put_text(
             display,
             f"ANGLE  {left_angle:.0f}°",
@@ -1030,6 +1212,7 @@ class ExerciseDetector:
             2,
             (255, 255, 255)
         )
+
 
         put_text(
             display,
@@ -1054,6 +1237,7 @@ class ExerciseDetector:
             25
         )
 
+
         put_text(
             display,
             "RIGHT ARM",
@@ -1063,14 +1247,18 @@ class ExerciseDetector:
             (255, 255, 255)
         )
 
+
         put_text(
             display,
-            str(self.right_counter.reps),
+            str(
+                self.right_counter.reps
+            ),
             (935, 580),
             2.0,
             4,
             (255, 140, 80)
         )
+
 
         put_text(
             display,
@@ -1081,6 +1269,7 @@ class ExerciseDetector:
             (170, 180, 190)
         )
 
+
         put_text(
             display,
             f"ANGLE  {right_angle:.0f}°",
@@ -1089,6 +1278,7 @@ class ExerciseDetector:
             2,
             (255, 255, 255)
         )
+
 
         put_text(
             display,
@@ -1113,6 +1303,7 @@ class ExerciseDetector:
             25
         )
 
+
         put_text(
             display,
             "EXERCISE DETECTED",
@@ -1123,12 +1314,14 @@ class ExerciseDetector:
         )
 
 
-        exercise_name = str(
-            prediction
-        ).replace(
-            "_",
-            " "
-        ).upper()
+        exercise_name = (
+            str(prediction)
+            .replace(
+                "_",
+                " "
+            )
+            .upper()
+        )
 
 
         put_text(
@@ -1146,11 +1339,9 @@ class ExerciseDetector:
         # ====================================================
 
         bar_x = 465
-
         bar_y = 595
 
         bar_width = 340
-
         bar_height = 15
 
 
@@ -1161,10 +1352,8 @@ class ExerciseDetector:
                 bar_y
             ),
             (
-                bar_x +
-                bar_width,
-                bar_y +
-                bar_height
+                bar_x + bar_width,
+                bar_y + bar_height
             ),
             (50, 55, 65),
             -1
@@ -1172,9 +1361,13 @@ class ExerciseDetector:
 
 
         confidence_width = int(
-            bar_width *
+            bar_width
+            *
             min(
-                confidence,
+                max(
+                    confidence,
+                    0.0
+                ),
                 1.0
             )
         )
@@ -1187,10 +1380,9 @@ class ExerciseDetector:
                 bar_y
             ),
             (
-                bar_x +
-                confidence_width,
-                bar_y +
-                bar_height
+                bar_x
+                + confidence_width,
+                bar_y + bar_height
             ),
             (80, 230, 255),
             -1
@@ -1220,6 +1412,7 @@ class ExerciseDetector:
             (130, 140, 150)
         )
 
+
         put_text(
             display,
             "LIVE",
@@ -1231,7 +1424,7 @@ class ExerciseDetector:
 
 
         # ====================================================
-        # RETURN
+        # JSON RESULT
         # ====================================================
 
         result = {

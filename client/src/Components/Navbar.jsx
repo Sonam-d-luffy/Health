@@ -5,17 +5,23 @@ import { useCurrentUser } from "../Context/CurrentUserContext";
 const Navbar = ({ logo, title, onButtonClick, buttonName = "Login" }) => {
   const navigate = useNavigate();
   const {currentUser} = useCurrentUser()
-  const handleNavClick = (item) => {
+   const handleNavClick = (item) => {
     if (item === "Profile") {
       if (currentUser?._id) {
         navigate(`/profile/${currentUser._id}`);
+      }else{
+        navigate('/playerLogin')
       }
     } else if (item === "Home") {
       navigate("/");
     } else if (item === "Record") {
       navigate("/record");
     } else if (item === "AI Trainer") {
-      navigate("/aiTrainer");
+      if(currentUser){
+      navigate("/FitnessTrainer");
+      }else{
+        navigate("/playerLogin")
+      }
     }
   };
 

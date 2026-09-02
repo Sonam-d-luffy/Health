@@ -18,6 +18,7 @@ import Leaderboard from './Pages/LeaderBoard';
 import TerritoryMap from './Components/TerritoryMap';
 import Profile from './Pages/Profile';
 import InstituteDashboard from './Pages/InstituteDashboard';
+import FitnessTrainer from './Pages/FitnessTrainer';
 
 function App() {
 
@@ -42,6 +43,7 @@ function App() {
   <Route path='/:id/academies' element={<Academy/>} />
   <Route path='/territoryMap' element={<TerritoryMap/>} />
   <Route path='/profile/:id' element={<Profile/>} />
+  <Route path='/FitnessTrainer' element={<FitnessTrainer/>} />
 </Routes>
     </BrowserRouter>
   )

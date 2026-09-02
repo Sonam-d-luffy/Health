@@ -19,7 +19,6 @@ const PORT = process.env.PORT
 
 const app = express()
 
-import cors from "cors";
 
 app.use(
   cors({

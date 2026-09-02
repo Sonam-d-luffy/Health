@@ -22,7 +22,7 @@ const Submissions = () => {
       setLoading(true)
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/reports/${academyId}/report`,
+          `${import.meta.env.VITE_BACKEND_URL}/api/reports/${academyId}/report`,
           {
             params: {
               search: search || undefined,
@@ -63,7 +63,7 @@ const Submissions = () => {
 
     try {
       const res = await axios.patch(
-        `http://localhost:5000/api/reports/${id}/status`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/reports/${id}/status`,
         { status: newStatus }
       )
 
@@ -95,7 +95,7 @@ const sendMail = async id => {
 
   try {
     const res = await axios.post(
-      `http://localhost:5000/api/mail/${id}/send-mail`
+      `${import.meta.env.VITE_BACKEND_URL}/api/mail/${id}/send-mail`
     )
 
     setMessage(res.data.message)

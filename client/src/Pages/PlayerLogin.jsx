@@ -35,7 +35,7 @@ const PlayerLogin = () => {
   const profile = (id) => {
     navigate(`/profile/${id}`)
   }
-  const API_URL = "http://localhost:5000/api/player";
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/player`;
 
   // =========================
   // PINCODE
@@ -46,7 +46,7 @@ const PlayerLogin = () => {
 
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/pincode/${pincode}`
+        `${import.meta.env.VITE_BACKEND_URL}/api/pincode/${pincode}`
       );
 
       const data = res.data[0];

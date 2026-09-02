@@ -19,7 +19,7 @@ const YourSub = () => {
       setLoading(true);
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/reports/player/${playerId}`
+          `${import.meta.env.VITE_BACKEND_URL}/api/reports/player/${playerId}`
         );
 
         const data = res.data.reports ;

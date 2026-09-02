@@ -29,7 +29,7 @@ const application = (id) => {
         }
 
         const response = await axios.get(
-          `http://localhost:5000/api/activity/profile/${userId}`
+          `${import.meta.env.VITE_BACKEND_URL}/api/activity/profile/${userId}`
         );
 
         if (response.data.success) {

@@ -27,7 +27,7 @@ const InstituteDashboard = () => {
           return;
         }
         const res = await axios.get(
-          `http://localhost:5000/api/institute/profile/${id}`
+          `${import.meta.env.VITE_BACKEND_URL}/api/institute/profile/${id}`
         );
 
         if (res.data.success) {

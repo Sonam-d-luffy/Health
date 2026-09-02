@@ -21,7 +21,7 @@ const AcademyDetails = () => {
       setLoading(true)
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/academy/academy/${acaId}`
+          `${import.meta.env.VITE_BACKEND_URL}/api/academy/academy/${acaId}`
         )
         setAcademy(res.data.academy)
       } catch (error) {

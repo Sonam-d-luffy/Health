@@ -23,7 +23,7 @@ const OTP = () => {
     }
 
     try {
-      const res = await axios.post('http://localhost:5000/api/verify/verify-email', {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/verify/verify-email`, {
        instituteId: InstituteId,
         otp
       });
@@ -52,7 +52,7 @@ const OTP = () => {
     }
 
     try {
-      const res = await axios.post('http://localhost:5000/api/verify/resend-otp', {instituteId: InstituteId });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/verify/resend-otp`, {instituteId: InstituteId });
       setMessage(`New OTP sent: ${res.data.otp}`); // for testing
     } catch (error) {
       console.error(error);

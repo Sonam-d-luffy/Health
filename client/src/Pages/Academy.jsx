@@ -47,15 +47,15 @@ const Academy = () => {
           order
         }
         if (address.trim()) {
-          url = 'http://localhost:5000/api/academy/search-address'
+          url = '${import.meta.env.VITE_BACKEND_URL}/api/academy/search-address'
           params.address = address
           params.radius = radius
         } else if (girlsOnly) {
-          url = 'http://localhost:5000/api/academy/girls'
+          url = `${import.meta.env.VITE_BACKEND_URL}/api/academy/girls`
         } else if (mode === 'matching') {
-          url = `http://localhost:5000/api/academy/matchingAcademy/${id}`
+          url = `${import.meta.env.VITE_BACKEND_URL}/api/academy/matchingAcademy/${id}`
         } else {
-          url = 'http://localhost:5000/api/academy/academies'
+          url = `${import.meta.env.VITE_BACKEND_URL}/api/academy/academies`
         }
         const res = await axios.get(url, { params })
         const data = res.data.academies || res.data.institutes || []

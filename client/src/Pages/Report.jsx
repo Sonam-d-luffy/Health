@@ -43,7 +43,7 @@ const SubmitReport = () => {
 
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/reports/${playerId}/${academyId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/reports/${playerId}/${academyId}`,
         data,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );

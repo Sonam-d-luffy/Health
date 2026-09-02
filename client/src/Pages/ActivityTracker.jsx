@@ -245,7 +245,7 @@ const Activity = () => {
         currentUser?._id || currentUser?.id;
 
       const response = await axios.post(
-        "http://localhost:5000/api/activity/save",
+        `${import.meta.env.VITE_BACKEND_URL}/api/activity/save`,
         {
           userId,
 

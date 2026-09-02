@@ -25,7 +25,7 @@ const PlayerOTP = () => {
     }
 
     try {
-      const res = await axios.post('http://localhost:5000/api/verify/verify-email-player', {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/verify/verify-email-player`, {
         playerId,
         otp,
       });
@@ -55,7 +55,7 @@ const PlayerOTP = () => {
     }
 
     try {
-      const res = await axios.post('http://localhost:5000/api/verify/resend-otp-player', {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/verify/resend-otp-player`, {
         playerId,
       });
       setMessage(`New OTP sent: ${res.data.otp}`); // show for testing (remove in prod)

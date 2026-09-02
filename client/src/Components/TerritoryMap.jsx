@@ -40,7 +40,7 @@ const TerritoryMap = () => {
     const fetchTerritories = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:5000/api/territory/champs"
+          "${import.meta.env.VITE_BACKEND_URL}/api/territory/champs"
         );
 
         console.log("Territories:", response.data);

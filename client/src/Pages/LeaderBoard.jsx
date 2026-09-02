@@ -19,7 +19,7 @@ const Leaderboard = () => {
       setLoading(true);
 
       const { data } = await axios.get(
-        `http://localhost:5000/api/activity/leaderboard?type=${type}`
+        `${import.meta.env.VITE_BACKEND_URL}/api/activity/leaderboard?type=${type}`
       );
 
       setLeaderboard(data.leaderboard || []);

@@ -42,7 +42,7 @@ const InstituteLogin = () => {
   const { setCurrentUser } = useCurrentUser();
   const navigate = useNavigate();
 
-  const API_URL = "http://localhost:5000/api/institute";
+  const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/institute`;
 
   const handlePincodeBlur = async () => {
     if (pincode.length !== 6) {
@@ -54,7 +54,7 @@ const InstituteLogin = () => {
       setMessage("");
 
       const res = await axios.get(
-        `http://localhost:5000/api/pincode/${pincode}`
+        `${import.meta.env.VITE_BACKEND_URL}/api/pincode/${pincode}`
       );
 
       const data = res.data[0];

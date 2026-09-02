@@ -52,7 +52,7 @@ const FitnessTrainer = () => {
   // ============================================================
 
   const API_URL =
-    import.meta.env.VITE_API_URL 
+    import.meta.env.VITE_BACKEND_URL 
 
   const AI_URL =
     import.meta.env.VITE_AI_URL ||

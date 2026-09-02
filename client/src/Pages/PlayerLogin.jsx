@@ -255,10 +255,7 @@ const PlayerLogin = () => {
         "Player created successfully"
       );
 
-      setTimeout(() => {
-        navigate("/playerDashboard");
-      }, 1000);
-
+      profile()
     } catch (error) {
       setMessage(
         error.response?.data?.message ||

@@ -10,11 +10,6 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
-
-# --------------------------------------------------
-# ENVIRONMENT
-# --------------------------------------------------
-
 load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -26,20 +21,11 @@ if not GOOGLE_API_KEY:
 if not GROQ_API_KEY:
     raise RuntimeError("GROQ_API_KEY is not set")
 
-
-# --------------------------------------------------
-# APP
-# --------------------------------------------------
-
 app = FastAPI(
     title="WE-SPORTS Fitness RAG",
     version="1.0"
 )
 
-
-# --------------------------------------------------
-# CORS
-# --------------------------------------------------
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 app.add_middleware(
     CORSMiddleware,
@@ -55,11 +41,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# --------------------------------------------------
-# GEMINI EMBEDDINGS
-# --------------------------------------------------
-
 print("Loading Gemini embeddings...")
 
 embeddings = GoogleGenerativeAIEmbeddings(
@@ -69,10 +50,6 @@ embeddings = GoogleGenerativeAIEmbeddings(
 
 print("Gemini embeddings loaded")
 
-
-# --------------------------------------------------
-# LOAD FAISS
-# --------------------------------------------------
 
 print("Loading FAISS index...")
 
@@ -84,11 +61,6 @@ vectorstore = FAISS.load_local(
 
 print("FAISS index loaded")
 
-
-# --------------------------------------------------
-# RETRIEVER
-# --------------------------------------------------
-
 retriever = vectorstore.as_retriever(
     search_type="similarity",
     search_kwargs={
@@ -96,10 +68,6 @@ retriever = vectorstore.as_retriever(
     }
 )
 
-
-# --------------------------------------------------
-# GROQ LLM
-# --------------------------------------------------
 
 print("Loading Groq LLM...")
 
@@ -110,11 +78,6 @@ llm = ChatGroq(
 )
 
 print("Groq LLM loaded")
-
-
-# --------------------------------------------------
-# PROMPT
-# --------------------------------------------------
 
 prompt = ChatPromptTemplate.from_template("""
 You are the AI Fitness Trainer for WE-SPORTS.
@@ -141,18 +104,10 @@ Question:
 Answer:
 """)
 
-
-# --------------------------------------------------
-# REQUEST MODEL
-# --------------------------------------------------
-
 class QuestionRequest(BaseModel):
     question: str
 
 
-# --------------------------------------------------
-# ASK ENDPOINT
-# --------------------------------------------------
 
 @app.post("/ask")
 async def ask_fitness(request: QuestionRequest):
@@ -169,17 +124,10 @@ async def ask_fitness(request: QuestionRequest):
 
         print(f"Question: {question}")
 
-        # ------------------------------------------
-        # RETRIEVE RELEVANT DOCUMENTS
-        # ------------------------------------------
-
+     
         docs = retriever.invoke(question)
 
         print(f"Retrieved documents: {len(docs)}")
-
-        # ------------------------------------------
-        # BUILD CONTEXT
-        # ------------------------------------------
 
         context_parts = []
 
@@ -207,20 +155,12 @@ Content:
 
         context = "\n\n".join(context_parts)
 
-        # ------------------------------------------
-        # GENERATE ANSWER
-        # ------------------------------------------
-
         messages = prompt.invoke({
             "context": context,
             "question": question
         })
 
         response = llm.invoke(messages)
-
-        # ------------------------------------------
-        # SOURCES
-        # ------------------------------------------
 
         sources = []
 
@@ -269,10 +209,6 @@ Content:
             "sources": []
         }
 
-
-# --------------------------------------------------
-# HEALTH CHECK
-# --------------------------------------------------
 
 @app.get("/")
 def home():

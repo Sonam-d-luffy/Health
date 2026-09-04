@@ -21,7 +21,9 @@ const Home = () => {
   const post = () => {
     navigate("/post");
   };
-
+const communities = () => {
+  navigate("/community")
+}
   return (
     <Layout>
       {/* =====================================================
@@ -470,7 +472,7 @@ const Home = () => {
             </p>
 
             <button
-              onClick={post}
+              onClick={communities}
               className="
                 mt-6
                 rounded-full

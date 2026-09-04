@@ -13,6 +13,7 @@ import activity from './controllers/activity.js'
 import territory from './controllers/territory.js'
 import institute from './controllers/institute.js'
 import fitness from './controllers/fitness.js'
+import communities from './controllers/community.js'
 
 dotenv.config()
 
@@ -42,6 +43,7 @@ app.use('/api/activity',activity)
 app.use('/api/territory' , territory)
 app.use('/api/institute',institute)
 app.use('/api/fitness', fitness)
+app.use('/api/community',communities)
 
 
 

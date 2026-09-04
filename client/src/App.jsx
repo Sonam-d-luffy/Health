@@ -19,6 +19,7 @@ import TerritoryMap from './Components/TerritoryMap';
 import Profile from './Pages/Profile';
 import InstituteDashboard from './Pages/InstituteDashboard';
 import FitnessTrainer from './Pages/FitnessTrainer';
+import Communities from './Pages/Communities';
 
 function App() {
 
@@ -44,6 +45,7 @@ function App() {
   <Route path='/territoryMap' element={<TerritoryMap/>} />
   <Route path='/profile/:id' element={<Profile/>} />
   <Route path='/FitnessTrainer' element={<FitnessTrainer/>} />
+  <Route path="/community" element={<Communities/>} />
 </Routes>
     </BrowserRouter>
   )

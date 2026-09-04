@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Layout } from "lucide";
 
-import Layout from "../../../backend/Components/Layout";
-import assets from "../../../backend/assets/assets";
 
 const UserProfile = () => {
   const { playerId } = useParams();
@@ -115,13 +114,11 @@ const UserProfile = () => {
   const profileImage =
     player.profileImage ||
     player.image ||
-    player.avatar ||
-    assets.profile;
+    player.avatar 
 
   const coverImage =
     player.coverImage ||
-    player.bannerImage ||
-    assets.s1;
+    player.bannerImage 
 
   return (
     <Layout>

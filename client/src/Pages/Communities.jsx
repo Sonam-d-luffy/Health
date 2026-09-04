@@ -28,7 +28,7 @@ const Communities = () => {
       }
 
       axios
-        .get(`${import.meta.env.VITE_API_URL}/api/community/findPeople`, {
+        .get(`${import.meta.env.VITE_BACKEND_URL}/api/community/findPeople`, {
           params: {
             latitude,
             longitude,

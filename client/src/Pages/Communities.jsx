@@ -3,10 +3,10 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 import Layout from "../Components/Layout";
-import { CurrentUserContext } from "../Context/CurrentUserContext";
+import { useCurrentUser } from "../Context/CurrentUserContext";
 
 const Communities = () => {
-  const { currentUser } = useContext(CurrentUserContext);
+  const {currentUser} = useCurrentUser()
   const navigate = useNavigate();
 
   const [players, setPlayers] = useState([]);

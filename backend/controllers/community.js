@@ -1,5 +1,5 @@
 import express from 'express'
-import { findPeople } from '../routes/communities';
+import { findPeople } from '../routes/communities.js';
 
 const router = express.Router()
 

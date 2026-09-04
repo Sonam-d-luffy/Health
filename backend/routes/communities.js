@@ -174,3 +174,32 @@ export const findPeople = async (req, res) => {
         });
     }
 };
+
+export const userProfile = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const player = await Player.findById(userId)
+            .select("-password -email");
+
+        if (!player) {
+            return res.status(404).json({
+                success: false,
+                message: "Player not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            player
+        });
+
+    } catch (error) {
+        console.error("User profile error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch player profile"
+        });
+    }
+};

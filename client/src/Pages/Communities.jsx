@@ -62,7 +62,7 @@ const Communities = () => {
         <div className="mx-auto max-w-4xl">
 
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-8 mt-10">
             <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Communities
             </h1>

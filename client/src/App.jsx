@@ -20,6 +20,7 @@ import Profile from './Pages/Profile';
 import InstituteDashboard from './Pages/InstituteDashboard';
 import FitnessTrainer from './Pages/FitnessTrainer';
 import Communities from './Pages/Communities';
+import UserProfile from './Pages/userProfile';
 
 function App() {
 
@@ -46,6 +47,7 @@ function App() {
   <Route path='/profile/:id' element={<Profile/>} />
   <Route path='/FitnessTrainer' element={<FitnessTrainer/>} />
   <Route path="/community" element={<Communities/>} />
+  <Route path="/player/:playerId" element={<UserProfile/>} />
 </Routes>
     </BrowserRouter>
   )

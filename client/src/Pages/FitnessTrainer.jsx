@@ -753,14 +753,9 @@ const FitnessTrainer = () => {
 
             <div>
 
-              <p className="text-sm tracking-[0.3em] text-white/50 uppercase">
-                AI Trainer
-              </p>
+             
 
-              <h1 className="text-3xl sm:text-4xl font-bold text-white mt-2">
-                Bicep Curl Session
-              </h1>
-
+             
               <p className="text-white/50 mt-2">
                 Perform your exercise and let AI track your reps.
               </p>

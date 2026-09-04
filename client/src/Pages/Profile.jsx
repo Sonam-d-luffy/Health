@@ -472,7 +472,7 @@ const application = (id) => {
               </div>
 
               <button
-                onClick={() => navigate("/aiTrainer")}
+                onClick={() => navigate("/FitnessTrainer")}
                 className="
                   shrink-0
                   rounded-full

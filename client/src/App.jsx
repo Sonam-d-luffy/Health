@@ -20,7 +20,8 @@ import Profile from './Pages/Profile';
 import InstituteDashboard from './Pages/InstituteDashboard';
 import FitnessTrainer from './Pages/FitnessTrainer';
 import Communities from './Pages/Communities';
-import UserProfile from './Pages/userProfile';
+import UserProfile from './Pages/UserProfile';
+
 
 function App() {
 

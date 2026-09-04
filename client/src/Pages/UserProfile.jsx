@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-import Layout from "../Components/Layout";
-import assets from "../assets/assets";
+import Layout from "../../../backend/Components/Layout";
+import assets from "../../../backend/assets/assets";
 
 const UserProfile = () => {
   const { playerId } = useParams();

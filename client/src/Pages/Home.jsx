@@ -23,9 +23,7 @@ const communities = () => {
 }
   return (
     <Layout>
-      {/* =====================================================
-          HERO SECTION
-      ====================================================== */}
+      
       <section className="relative min-h-screen w-full overflow-hidden pt-28 sm:pt-32 lg:pt-24">
         <div
           className="

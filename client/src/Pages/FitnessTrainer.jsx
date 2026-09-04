@@ -58,9 +58,6 @@ const FitnessTrainer = () => {
     import.meta.env.VITE_AI_URL ||
     "http://localhost:8000";
 
-  // ============================================================
-  // START CAMERA
-  // ============================================================
 
   const startCamera = async () => {
     try {

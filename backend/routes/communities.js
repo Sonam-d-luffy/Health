@@ -1,4 +1,4 @@
-import Player from "../models/Player.js";
+import Player from "../models/playerModel.js";
 import { haversineDistance } from "../utils/haversine.js";
 
 export const findPeople = async (req, res) => {

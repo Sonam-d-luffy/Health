@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Layout } from "lucide";
+import Layout from "../Components/Layout";
 
 
 const PlayerProfile = () => {
@@ -74,7 +74,6 @@ const PlayerProfile = () => {
     );
   }
 
-  /* ================= ERROR ================= */
 
   if (error || !profile) {
     return (

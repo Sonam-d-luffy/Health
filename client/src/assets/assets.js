@@ -17,6 +17,7 @@ import a1 from './a1.jpg'
 import s6 from './s6.png'
 import tbc from './tbc.webp'
 import bg from './bg.mp4'
+import rag from './rag.jpg'
 const assets = {
 c1,
 clogo,
@@ -26,7 +27,7 @@ s3,
 s4,
 s5,
 d1,d2,d3,d4,d5,
-doc1,doc3,doc2,a1,s6,tbc,bg
+doc1,doc3,doc2,a1,s6,tbc,bg,rag
 }
 
 export default assets;

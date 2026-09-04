@@ -18,7 +18,7 @@ const Bot = () => {
       setSources([]);
 
       const response = await axios.post(
-        `${VITE_AI_URL}/ask`,
+        `${import.meta.env.VITE_AI_URL}/ask`,
         {
           question: question.trim(),
         }

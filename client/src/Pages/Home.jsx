@@ -18,9 +18,6 @@ const Home = () => {
     navigate("/playerLogin");
   };
 
-  const post = () => {
-    navigate("/post");
-  };
 const communities = () => {
   navigate("/community")
 }
@@ -144,7 +141,7 @@ const communities = () => {
               </button>
 
               <button
-                onClick={post}
+                onClick={communities}
                 className="
                   w-full
                   rounded-full

@@ -4,7 +4,7 @@ import axios from "axios";
 import { Layout } from "lucide";
 
 
-const UserProfile = () => {
+const PlayerProfile = () => {
   const { playerId } = useParams();
   const navigate = useNavigate();
 
@@ -389,4 +389,4 @@ const UserProfile = () => {
   );
 };
 
-export default UserProfile;
+export default PlayerProfile;

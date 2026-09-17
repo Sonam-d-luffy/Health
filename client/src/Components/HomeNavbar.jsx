@@ -47,7 +47,7 @@ const HomeNavbar = () => {
 
   return (
     <>
-     <Navbar logo={assets.clogo} title="sports sarthi"  onButtonClick={() => setSidebarOpen(!sidebarOpen)} buttonName={currentUser? currentUser?.name : "Login"}/>
+     <Navbar logo={assets.clogo} title="WE SPORTS"  onButtonClick={() => setSidebarOpen(!sidebarOpen)} buttonName={currentUser? currentUser?.name : "Login"}/>
        <div className="flex flex-1">
         {/* Sidebar (toggleable) */}
         {sidebarOpen && (

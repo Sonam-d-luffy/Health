@@ -10,7 +10,7 @@ const Layout = ({ children, currentUser }) => {
     <Bg>
       <HomeNavbar
         logo={assets.clogo}
-        title="sports saarthi"
+        title="WE SPORTS"
         buttonName={currentUser?.name}
       />
 
